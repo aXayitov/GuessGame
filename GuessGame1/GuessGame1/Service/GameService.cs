@@ -1,25 +1,52 @@
-﻿using GuessGame1.Data;
+﻿using AutoMapper;
+using GuessGame1.Data;
+using GuessGame1.DTOs.UserDTO;
 using GuessGame1.Entity;
 using GuessGame1.Interface;
+using Microsoft.EntityFrameworkCore;
 
 namespace GuessGame1.Service
 {
-    public class GameService(GameDbContext context) : IGameService
+    public class GameService(IMapper mapper, GameDbContext context) : IGameService
     {
         private readonly GameDbContext _context = context
             ?? throw new ArgumentNullException(nameof(context));
+        private readonly IMapper _mapper = mapper
+            ?? throw new ArgumentNullException(nameof(mapper));
 
         public Game StartGame(string playerName)
         {
+            var user = _context.Users.FirstOrDefault(u => u.UserName == playerName);
+            if (user == null)
+            {
+                user = new User { UserName = playerName };
+                _context.Users.Add(user);
+                _context.SaveChanges();
+            }
+
+            int todayGames = _context.Games.Count(g => g.UserId == user.Id && g.CreatedAt.Date == DateTime.UtcNow.Date);
+            if (todayGames >= 8)
+                throw new Exception("You have reached the daily limit of 8 games!");
+
             var newGame = new Game
             {
-                PlayerName = playerName,
+                UserId = user.Id,
                 SecretNumber = SecretNumber()
             };
+
             _context.Games.Add(newGame);
             _context.SaveChanges();
+
             return newGame;
         }
+
+        private string SecretNumber()
+        {
+            Random rand = new Random();
+            return rand.Next(1000, 9999).ToString();
+        }
+
+
 
         public string MakeGuess(Guid gameId, string guess)
         {
@@ -50,6 +77,17 @@ namespace GuessGame1.Service
             return Result(game.SecretNumber, guess);
         }
 
+        public List<UserDto> GetUsers(string UserName)
+        {
+            var users = _context.Users
+            .Include(u => u.Games)
+            .Where(u => string.IsNullOrWhiteSpace(UserName) || u.UserName.Contains(UserName))
+            .ToList();
+
+            return _mapper.Map<List<UserDto>>(users);
+        }
+
+
         private string Result(string secret, string guess)
         {
             int m = 0;
@@ -60,12 +98,6 @@ namespace GuessGame1.Service
                 else if (secret.Contains(guess[i])) m++;
             }
             return $"M:{m}; P:{p}";
-        }
-
-        private string SecretNumber()
-        {
-            Random rnd = new Random();
-            return string.Concat(Enumerable.Range(0, 10).OrderBy(_ => rnd.Next()).Take(4));
         }
     }
 }

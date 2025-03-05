@@ -1,5 +1,6 @@
 ﻿using GuessGame1.Interface;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace GuessGame1.Controllers;
 
@@ -24,4 +25,11 @@ public class GameController(IGameService gameService) : Controller
         var result = _gameService.MakeGuess(gameId, guess);
         return Ok(new { message = result });
     }
+    [HttpGet("user-games")]
+    public IActionResult GetUsers([FromQuery] string UserName)
+    {
+        var users = _gameService.GetUsers(UserName);
+        return Ok(users);
+    }
+
 }

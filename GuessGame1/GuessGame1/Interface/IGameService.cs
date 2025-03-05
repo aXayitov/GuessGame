@@ -1,4 +1,5 @@
-﻿using GuessGame1.Entity;
+﻿using GuessGame1.DTOs.UserDTO;
+using GuessGame1.Entity;
 
 namespace GuessGame1.Interface
 {
@@ -6,5 +7,6 @@ namespace GuessGame1.Interface
     {
         Game StartGame(string PlayerName);
         string MakeGuess(Guid gameId, string guess);
+        List<UserDto> GetUsers(string UseName);
     }
 }
